@@ -20,12 +20,6 @@ Upload all files in the specified directory to the server :
 $ ./UploadClient upload  -a localhost:9191 -d <folder>
 ```
 
-## Installation
-
-```
-$ go get github.com/rickslick/grpcUpload
-```
-
 ## License
 
 MIT
