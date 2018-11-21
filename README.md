@@ -2,7 +2,7 @@
 
 grpcUpload is CLI tool that uploads files in parallel using grpc.
 Featues :
-*  multi file upload using  grpc with concept of chunking
+*  concurrent multi file upload using  grpc with concept of chunking
 * supports tls (both client and sever )
 * Displays progress for each file
 
