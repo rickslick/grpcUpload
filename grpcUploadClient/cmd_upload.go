@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cheggaaa/pb"
 	"github.com/pkg/errors"
 	proto "github.com/rickslick/grpcUpload/proto"
 	"github.com/urfave/cli"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"gopkg.in/cheggaaa/pb.v1"
 )
 
 const chunkSize = 64 * 1024 // 64 KiB
@@ -54,8 +54,7 @@ func (d *uploader) Stop() {
 func (d *uploader) worker() {
 	defer d.wg.Done()
 	var (
-		buf     []byte
-		writing = true
+		buf []byte
 	)
 	for request := range d.requests {
 
@@ -94,13 +93,12 @@ func (d *uploader) worker() {
 		//create a buffer of chunkSize to be streamed
 		buf = make([]byte, chunkSize)
 
-		for writing {
+		for {
 			n, errRead := file.Read(buf)
 			if errRead != nil {
 				if errRead == io.EOF {
-					writing = false
 					errRead = nil
-					continue
+					break
 				}
 
 				errRead = errors.Wrapf(errRead,
