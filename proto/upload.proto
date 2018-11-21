@@ -1,0 +1,27 @@
+syntax = "proto3";
+package proto;
+
+message UploadRequestType {
+    
+  
+    bytes Content = 1;
+ 
+}
+
+message UploadResponseType {
+    string Message = 1;
+    UploadStatusCode Code = 2;
+}
+
+enum UploadStatusCode {
+    Unknown = 0;
+    Ok = 1;
+    Failed = 2;
+}
+
+
+service rkUploaderService {
+
+    rpc UploadFile(stream UploadRequestType) returns (UploadResponseType ) ;
+
+}
