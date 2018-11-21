@@ -6,6 +6,7 @@ Featues :
 * supports tls (both client and sever )
 * Displays progress for each file
 
+![rkUploader](https://raw.githubusercontent.com/rickslick/grpcUpload/master/recording.gif)
 ## Usage
 
 start the server :
