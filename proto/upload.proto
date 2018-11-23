@@ -5,6 +5,7 @@ message UploadRequestType {
     
   
     bytes Content = 1;
+    string Filename = 2;
  
 }
 

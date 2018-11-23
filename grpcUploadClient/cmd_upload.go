@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -54,7 +55,8 @@ func (d *uploader) Stop() {
 func (d *uploader) worker() {
 	defer d.wg.Done()
 	var (
-		buf []byte
+		buf        []byte
+		firstChunk bool
 	)
 	for request := range d.requests {
 
@@ -92,7 +94,7 @@ func (d *uploader) worker() {
 
 		//create a buffer of chunkSize to be streamed
 		buf = make([]byte, chunkSize)
-
+		firstChunk = true
 		for {
 			n, errRead := file.Read(buf)
 			if errRead != nil {
@@ -105,34 +107,43 @@ func (d *uploader) worker() {
 					"errored while copying from file to buf")
 				return
 			}
-
-			err = streamUploader.Send(&proto.UploadRequestType{
-				Content: buf[:n],
-			})
-			if err != nil {
-				err = errors.Wrapf(err,
-					"failed to send chunk via stream")
-				return
+			if firstChunk {
+				err = streamUploader.Send(&proto.UploadRequestType{
+					Content:  buf[:n],
+					Filename: request,
+				})
+				firstChunk = false
+			} else {
+				err = streamUploader.Send(&proto.UploadRequestType{
+					Content: buf[:n],
+				})
 			}
+			if err != nil {
+
+				bar.FinishPrint("failed to send chunk via stream file : " + request)
+				break
+				//bar.Reset(0)
+				//return
+			}
+
 			bar.Add64(int64(n))
 		}
-
 		status, err := streamUploader.CloseAndRecv()
-		if err != nil {
-			err = errors.Wrapf(err,
-				"failed to receive upstream status response")
+		if err != nil { //retry needed
+
+			fmt.Println("failed to receive upstream status response")
 			return
 		}
 
-		if status.Code != proto.UploadStatusCode_Ok {
-			err = errors.Errorf(
-				"upload failed - msg: %s",
-				status.Message)
+		if status.Code != proto.UploadStatusCode_Ok { //retry needed
+
+			bar.FinishPrint("Error uploading file : " + request + " :" + status.Message)
+			bar.Reset(0)
 			return
 		}
 
 		bar.Finish()
-		file.Close()
+
 	}
 
 }
