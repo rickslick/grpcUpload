@@ -27,6 +27,6 @@ MIT
 
 ## Author
 
-Rohan Koshy (a.k.a. rickslick)
-Ascesh Dandey (a.k.a ascesh)
-Based on multidownloader by mattn :  github.com/mattn/ft
+*Rohan Koshy (a.k.a. rickslick)
+*Ascesh Dandey (a.k.a ascesh)
+*Based on multidownloader by mattn :  github.com/mattn/ft
