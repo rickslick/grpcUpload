@@ -17,7 +17,7 @@ Server : start the server( default destination of files is /tmp)  :
 
 ```
 $./grpcUploadServer serve --a <ip:port> -d <destination folder>
-Eg ./UploadClient serve -a localhost:9191 -d /home/
+Eg ./UploadClient serve -a localhost:9191 -d /media/
 ```
 
 Client : Upload all files in the specified directory to the server  :
