@@ -13,16 +13,18 @@ TODO
 ![rkUploader](https://raw.githubusercontent.com/rickslick/grpcUpload/master/recording.gif)
 ## Usage
 
-start the server :
+Server : start the server( default destination of files is /tmp)  :
 
 ```
-$./grpcUploadServer serve --a localhost:9191 -d <destination folder>
+$./grpcUploadServer serve --a <ip:port> -d <destination folder>
+Eg ./UploadClient serve -a localhost:9191 -d /home/
 ```
 
-Upload all files in the specified directory to the server :
+Client : Upload all files in the specified directory to the server  :
 
 ```
-$ ./UploadClient upload  -a localhost:9191 -d <folder>
+$ ./UploadClient upload  -a <ip:port> -d <folder containing files to upload>   
+Eg  ./UploadClient upload -a localhost:9191 -d /home/
 ```
 
 ## License
