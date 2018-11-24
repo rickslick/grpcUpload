@@ -12,7 +12,7 @@ Featues :
 start the server :
 
 ```
-$./grpcUploadServer serve --a localhost:9191
+$./grpcUploadServer serve --a localhost:9191 -d <destination folder>
 ```
 
 Upload all files in the specified directory to the server :
