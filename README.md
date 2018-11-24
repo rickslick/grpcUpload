@@ -6,6 +6,10 @@ Featues :
 * supports tls (both client and sever )
 * Displays progress for each file
 
+TODO
+* retry handling on client per chunk / file
+* Adding authorization grpc interceptor
+
 ![rkUploader](https://raw.githubusercontent.com/rickslick/grpcUpload/master/recording.gif)
 ## Usage
 
