@@ -32,6 +32,7 @@ type uploader struct {
 	FailRequest chan string
 }
 
+//NewUploader creates a object of type uploader and creates fixed worker goroutines/threads
 func NewUploader(ctx context.Context, client proto.RkUploaderServiceClient, dir string) *uploader {
 	d := &uploader{
 		ctx:         ctx,
@@ -162,6 +163,9 @@ func (d *uploader) Do(filepath string) {
 	d.requests <- filepath
 }
 
+//UploadFiles takes in client grpcCLient object and  an optional list of file path or dir name as input.
+//It sends the files  using the grpcClient object to the server in parallel
+//returns error if file transfer is not successful
 func UploadFiles(ctx context.Context, client proto.RkUploaderServiceClient, filepathlist []string, dir string) error {
 
 	d := NewUploader(ctx, client, dir)
@@ -190,14 +194,14 @@ func UploadFiles(ctx context.Context, client proto.RkUploaderServiceClient, file
 			if !file.IsDir() {
 				select {
 
-				case req := <-d.DoneRequest:
+				case <-d.DoneRequest:
 
-					fmt.Println("sucessfully sent :" + req)
+					//fmt.Println("sucessfully sent :" + req)
 
 				case req := <-d.FailRequest:
 
 					fmt.Println("failed to  send " + req)
-					errorUploadbulk = errors.New("Failed to send")
+					errorUploadbulk = errors.Wrapf(errorUploadbulk, " Failed to send %s", req)
 
 				}
 			}
@@ -216,19 +220,17 @@ func UploadFiles(ctx context.Context, client proto.RkUploaderServiceClient, file
 		for i := 0; i < len(filepathlist); i++ {
 			select {
 
-			case req := <-d.DoneRequest:
-				fmt.Println("sucessfully sent " + req)
+			case <-d.DoneRequest:
+			//	fmt.Println("sucessfully sent " + req)
 			case req := <-d.FailRequest:
 				fmt.Println("failed to  send " + req)
-				errorUploadbulk = errors.New("Failed to send")
-				return errorUploadbulk
+				errorUploadbulk = errors.Wrapf(errorUploadbulk, " Failed to send %s", req)
 			}
 		}
-		fmt.Println("All done ")
 
 	}
 
-	return nil
+	return errorUploadbulk
 }
 
 func uploadCommand() cli.Command {
