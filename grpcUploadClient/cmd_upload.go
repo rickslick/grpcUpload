@@ -22,24 +22,28 @@ import (
 const chunkSize = 64 * 1024 // 64 KiB
 
 type uploader struct {
-	dir      string
-	client   proto.RkUploaderServiceClient
-	ctx      context.Context
-	wg       sync.WaitGroup
-	requests chan string // each request is a filepath on client accessible to client
-	pool     *pb.Pool
+	dir         string
+	client      proto.RkUploaderServiceClient
+	ctx         context.Context
+	wg          sync.WaitGroup
+	requests    chan string // each request is a filepath on client accessible to client
+	pool        *pb.Pool
+	DoneRequest chan string
+	FailRequest chan string
 }
 
 func NewUploader(ctx context.Context, client proto.RkUploaderServiceClient, dir string) *uploader {
 	d := &uploader{
-		ctx:      ctx,
-		client:   client,
-		dir:      dir,
-		requests: make(chan string),
+		ctx:         ctx,
+		client:      client,
+		dir:         dir,
+		requests:    make(chan string),
+		DoneRequest: make(chan string),
+		FailRequest: make(chan string),
 	}
 	for i := 0; i < 5; i++ {
 		d.wg.Add(1)
-		go d.worker()
+		go d.worker(i + 1)
 	}
 	d.pool, _ = pb.StartPool()
 	return d
@@ -52,7 +56,7 @@ func (d *uploader) Stop() {
 	d.pool.Stop()
 }
 
-func (d *uploader) worker() {
+func (d *uploader) worker(workerID int) {
 	defer d.wg.Done()
 	var (
 		buf        []byte
@@ -60,7 +64,8 @@ func (d *uploader) worker() {
 	)
 	for request := range d.requests {
 
-		//open file
+		//open
+		//.Println("Processsing " + request)
 		file, errOpen := os.Open(request)
 		if errOpen != nil {
 			errOpen = errors.Wrapf(errOpen,
@@ -129,9 +134,13 @@ func (d *uploader) worker() {
 			bar.Add64(int64(n))
 		}
 		status, err := streamUploader.CloseAndRecv()
+
 		if err != nil { //retry needed
 
 			fmt.Println("failed to receive upstream status response")
+			bar.FinishPrint("Error uploading file : " + request + " Error :" + err.Error())
+			bar.Reset(0)
+			d.FailRequest <- request
 			return
 		}
 
@@ -139,11 +148,12 @@ func (d *uploader) worker() {
 
 			bar.FinishPrint("Error uploading file : " + request + " :" + status.Message)
 			bar.Reset(0)
+			d.FailRequest <- request
 			return
 		}
-
+		//fmt.Println("writing done for : " + request + " by " + strconv.Itoa(workerID))
+		d.DoneRequest <- request
 		bar.Finish()
-
 	}
 
 }
@@ -155,6 +165,7 @@ func (d *uploader) Do(filepath string) {
 func UploadFiles(ctx context.Context, client proto.RkUploaderServiceClient, filepathlist []string, dir string) error {
 
 	d := NewUploader(ctx, client, dir)
+	var errorUploadbulk error
 
 	if dir != "" {
 
@@ -162,22 +173,60 @@ func UploadFiles(ctx context.Context, client proto.RkUploaderServiceClient, file
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer d.Stop()
+
+		go func() {
+			for _, file := range files {
+
+				if !file.IsDir() {
+
+					d.Do(dir + "/" + file.Name())
+
+				}
+			}
+		}()
 
 		for _, file := range files {
 			if !file.IsDir() {
+				select {
 
-				d.Do(dir + "/" + file.Name())
+				case req := <-d.DoneRequest:
 
+					fmt.Println("sucessfully sent :" + req)
+
+				case req := <-d.FailRequest:
+
+					fmt.Println("failed to  send " + req)
+					errorUploadbulk = errors.New("Failed to send")
+
+				}
 			}
 		}
+		fmt.Println("All done ")
 	} else {
 
-		for _, file := range filepathlist {
-			d.Do(file)
-		}
-	}
+		go func() {
+			for _, file := range filepathlist {
+				d.Do(file)
+			}
+		}()
 
-	d.Stop()
+		defer d.Stop()
+
+		for i := 0; i < len(filepathlist); i++ {
+			select {
+
+			case req := <-d.DoneRequest:
+				fmt.Println("sucessfully sent " + req)
+			case req := <-d.FailRequest:
+				fmt.Println("failed to  send " + req)
+				errorUploadbulk = errors.New("Failed to send")
+				return errorUploadbulk
+			}
+		}
+		fmt.Println("All done ")
+
+	}
 
 	return nil
 }

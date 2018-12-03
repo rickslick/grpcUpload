@@ -128,6 +128,7 @@ func (s *ServerGRPC) UploadFile(stream proto.RkUploaderService_UploadFileServer)
 	var fp *os.File
 
 	var fileData *proto.UploadRequestType
+
 	var filename string
 	for {
 
